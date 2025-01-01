@@ -3,20 +3,7 @@ export default {
   data() {
     return {
       ticker: 'BTC',
-      tickers: [
-        {
-          name: 'DEMO1',
-          price: '1201',
-        },
-        {
-          name: 'DEMO2',
-          price: '1202',
-        },
-        {
-          name: 'DEMO3',
-          price: '1203',
-        },
-      ],
+      tickers: [],
       sel: null,
     }
   },
@@ -29,11 +16,11 @@ export default {
       this.tickers.push(newTicker)
       setInterval(async () => {
         const f = await fetch(
-          // `https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key=420e35e35de3537d0d11caac933112798702e36d5826ff16798828fb34192e5a`,
+          `https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key=420e35e35de3537d0d11caac933112798702e36d5826ff16798828fb34192e5a`,
         )
         const data = await f.json()
-        console.log(data)
-      }, 3000)
+        this.tickers.find(t => t.name === newTicker.name).price = data.USD
+      }, 5000)
       this.ticker = ''
     },
     handleDelete(t) {
