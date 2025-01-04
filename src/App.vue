@@ -19,7 +19,7 @@ export default {
           `https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key=420e35e35de3537d0d11caac933112798702e36d5826ff16798828fb34192e5a`,
         )
         const data = await f.json()
-        this.tickers.find(t => t.name === newTicker.name).price = data.USD
+        this.tickers.find((t) => t.name === newTicker.name).price = data.USD
       }, 5000)
       this.ticker = ''
     },
@@ -53,7 +53,7 @@ export default {
                     placeholder="Например DOGE"
                   />
                 </div>
-                <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
+                <div class="flex bg-white p-1 rounded-md shadow-md flex-wrap">
                   <span
                     class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
                   >
