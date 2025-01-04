@@ -10,21 +10,26 @@ export default {
   methods: {
     add() {
       const newTicker = {
-        name: this.ticker,
+        name: this.ticker.toUpperCase(),
         price: '120NEW',
       }
-      this.tickers.push(newTicker)
-      setInterval(async () => {
-        const f = await fetch(
-          `https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key=420e35e35de3537d0d11caac933112798702e36d5826ff16798828fb34192e5a`,
-        )
-        const data = await f.json()
-        this.tickers.find((t) => t.name === newTicker.name).price = data.USD
-      }, 5000)
-      this.ticker = ''
+      if (!this.tickerExcists()) {
+        this.tickers.push(newTicker)
+        setInterval(async () => {
+          const f = await fetch(
+            `https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key=420e35e35de3537d0d11caac933112798702e36d5826ff16798828fb34192e5a`,
+          )
+          const data = await f.json()
+          this.tickers.find((t) => t.name === newTicker.name).price = data.USD
+        }, 5000)
+        this.ticker = ''
+      }
     },
     handleDelete(t) {
       this.tickers = this.tickers.filter((val) => val !== t)
+    },
+    tickerExcists() {
+      return this.tickers.find((t) => t.name.toUpperCase() === this.ticker.toUpperCase())
     },
   },
 }
@@ -75,7 +80,9 @@ export default {
                     CHD
                   </span>
                 </div>
-                <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
+                <div v-if="tickerExcists()" class="text-sm text-red-600">
+                  Такой тикер уже добавлен
+                </div>
               </div>
             </div>
             <button
