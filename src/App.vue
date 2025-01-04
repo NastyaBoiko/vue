@@ -5,6 +5,13 @@ export default {
       ticker: 'BTC',
       tickers: [],
       sel: null,
+      apiTickers: [],
+    }
+  },
+  async mounted() {
+    const tickersObj = await this.getTickers()
+    for (let ticker in tickersObj.Data) {
+      this.apiTickers.push(ticker)
     }
   },
   methods: {
@@ -30,6 +37,12 @@ export default {
     },
     tickerExcists() {
       return this.tickers.find((t) => t.name.toUpperCase() === this.ticker.toUpperCase())
+    },
+    async getTickers() {
+      const response = await fetch(
+        `https://min-api.cryptocompare.com/data/all/coinlist?summary=true`,
+      )
+      return await response.json()
     },
   },
 }
