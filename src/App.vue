@@ -2,7 +2,7 @@
 export default {
   data() {
     return {
-      ticker: 'BTC',
+      ticker: '',
       tickers: [],
       sel: null,
       apiTickers: [],
@@ -18,7 +18,7 @@ export default {
     add() {
       const newTicker = {
         name: this.ticker.toUpperCase(),
-        price: '120NEW',
+        price: '-',
       }
       if (!this.tickerExcists()) {
         this.tickers.push(newTicker)
@@ -27,16 +27,31 @@ export default {
             `https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key=420e35e35de3537d0d11caac933112798702e36d5826ff16798828fb34192e5a`,
           )
           const data = await f.json()
-          this.tickers.find((t) => t.name === newTicker.name).price = data.USD
+
+          this.tickers.find((t) => t.name === newTicker.name).price =
+            data.Response === 'Error' ? 'no info' : data.USD
         }, 5000)
         this.ticker = ''
       }
+    },
+    addFromList(apiTicker) {
+      this.ticker = apiTicker
+      this.add()
     },
     handleDelete(t) {
       this.tickers = this.tickers.filter((val) => val !== t)
     },
     tickerExcists() {
       return this.tickers.find((t) => t.name.toUpperCase() === this.ticker.toUpperCase())
+    },
+    filterTickers() {
+      return this.apiTickers
+        .filter((ticker) => {
+          const tickerUppercase = ticker.toUpperCase()
+          const thisTickerUppercase = this.ticker ? this.ticker.toUpperCase() : 'BT'
+          return tickerUppercase.includes(thisTickerUppercase)
+        })
+        .slice(0, 4)
     },
     async getTickers() {
       const response = await fetch(
@@ -73,24 +88,12 @@ export default {
                 </div>
                 <div class="flex bg-white p-1 rounded-md shadow-md flex-wrap">
                   <span
+                    v-for="(apiTicker, idx) in filterTickers()"
+                    :key="idx"
+                    @click="addFromList(apiTicker)"
                     class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
                   >
-                    BTC
-                  </span>
-                  <span
-                    class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-                  >
-                    DOGE
-                  </span>
-                  <span
-                    class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-                  >
-                    BCH
-                  </span>
-                  <span
-                    class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-                  >
-                    CHD
+                    {{ apiTicker }}
                   </span>
                 </div>
                 <div v-if="tickerExcists()" class="text-sm text-red-600">
