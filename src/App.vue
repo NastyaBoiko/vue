@@ -10,6 +10,16 @@ export default {
       notMounted: true,
     }
   },
+  created() {
+    const tickersData = localStorage.getItem('cryptonomicon-list')
+
+    if (tickersData) {
+      this.tickers = JSON.parse(tickersData)
+      this.tickers.forEach((ticker) => {
+        this.subscribeToUpdates(ticker.name)
+      })
+    }
+  },
   async mounted() {
     const tickersObj = await this.getTickers()
     for (let ticker in tickersObj.Data) {
@@ -18,6 +28,22 @@ export default {
     this.notMounted = false
   },
   methods: {
+    subscribeToUpdates(tickerName) {
+      setInterval(async () => {
+        const f = await fetch(
+          `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=420e35e35de3537d0d11caac933112798702e36d5826ff16798828fb34192e5a`,
+        )
+        const data = await f.json()
+
+        this.tickers.find((t) => t.name === tickerName).price =
+          data.Response === 'Error' ? 'no info' : data.USD
+
+        if (this.sel?.name === tickerName) {
+          this.graph.push(data.USD)
+        }
+      }, 5000)
+      this.ticker = ''
+    },
     add() {
       const newTicker = {
         name: this.ticker.toUpperCase(),
@@ -25,20 +51,8 @@ export default {
       }
       if (!this.tickerExcists()) {
         this.tickers.push(newTicker)
-        setInterval(async () => {
-          const f = await fetch(
-            `https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key=420e35e35de3537d0d11caac933112798702e36d5826ff16798828fb34192e5a`,
-          )
-          const data = await f.json()
-
-          this.tickers.find((t) => t.name === newTicker.name).price =
-            data.Response === 'Error' ? 'no info' : data.USD
-
-          if (this.sel?.name === newTicker.name) {
-            this.graph.push(data.USD)
-          }
-        }, 5000)
-        this.ticker = ''
+        localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
+        this.subscribeToUpdates(newTicker.name)
       }
     },
     addFromList(apiTicker) {
