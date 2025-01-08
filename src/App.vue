@@ -5,6 +5,7 @@ export default {
       ticker: '',
       tickers: [],
       sel: null,
+      graph: [],
       apiTickers: [],
     }
   },
@@ -30,6 +31,10 @@ export default {
 
           this.tickers.find((t) => t.name === newTicker.name).price =
             data.Response === 'Error' ? 'no info' : data.USD
+
+          if (this.sel?.name === newTicker.name) {
+            this.graph.push(data.USD)
+          }
         }, 5000)
         this.ticker = ''
       }
@@ -52,6 +57,18 @@ export default {
           return tickerUppercase.includes(thisTickerUppercase)
         })
         .slice(0, 4)
+    },
+    normilizeGraph() {
+      const maxVal = Math.max(...this.graph)
+      const minVal = Math.min(...this.graph)
+      console.log(this.graph)
+      return this.graph.map((el) =>
+        maxVal === minVal ? 5 : 5 + ((el - minVal) * 95) / (maxVal - minVal),
+      )
+    },
+    select(ticker) {
+      this.sel = ticker
+      this.graph = []
     },
     async getTickers() {
       const response = await fetch(
@@ -128,7 +145,7 @@ export default {
               <div
                 v-for="t in tickers"
                 :key="t.name"
-                @click="sel = t"
+                @click="select(t)"
                 :class="{
                   'border-2': sel === t,
                 }"
@@ -165,10 +182,12 @@ export default {
           <section v-if="sel" class="relative">
             <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">{{ sel.name }} - USD</h3>
             <div class="flex items-end border-gray-600 border-b border-l h-64">
-              <div class="bg-purple-800 border w-10 h-24"></div>
-              <div class="bg-purple-800 border w-10 h-32"></div>
-              <div class="bg-purple-800 border w-10 h-48"></div>
-              <div class="bg-purple-800 border w-10 h-16"></div>
+              <div
+                v-for="(bar, idx) in normilizeGraph()"
+                :key="idx"
+                :style="{ height: `${bar}%` }"
+                class="bg-purple-800 border w-10"
+              ></div>
             </div>
             <button @click="sel = null" type="button" class="absolute top-0 right-0">
               <svg
