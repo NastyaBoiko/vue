@@ -3,24 +3,36 @@ export default {
   data() {
     return {
       ticker: '',
+      filter: '',
+
       tickers: [],
-      sel: null,
+      selectedTicker: null,
+
       graph: [],
+      page: 1,
+
       apiTickers: [],
       notMounted: true,
-      page: 1,
-      filter: '',
-      hasNextPage: true,
     }
   },
+
   created() {
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
-    if (windowData.filter) {
-      this.filter = windowData.filter
-    }
-    if (windowData.page) {
-      this.page = windowData.page
-    }
+
+    const VALID_KEYS = ['filter', 'data']
+
+    VALID_KEYS.forEach((key) => {
+      if (windowData[key]) {
+        this[key] = windowData[key]
+      }
+    })
+
+    // if (windowData.filter) {
+    //   this.filter = windowData.filter
+    // }
+    // if (windowData.page) {
+    //   this.page = windowData.page
+    // }
 
     const tickersData = localStorage.getItem('cryptonomicon-list')
 
@@ -31,6 +43,7 @@ export default {
       })
     }
   },
+
   async mounted() {
     const tickersObj = await this.getTickers()
     for (let ticker in tickersObj.Data) {
@@ -38,14 +51,47 @@ export default {
     }
     this.notMounted = false
   },
-  methods: {
-    filteredTickers() {
-      const start = 6 * (this.page - 1)
-      const end = 6 * this.page
-      const filteredTickers = this.tickers.filter((ticker) => ticker.name.includes(this.filter))
-      this.hasNextPage = filteredTickers.length > end
-      return filteredTickers.slice(start, end)
+
+  computed: {
+    startIndex() {
+      return 6 * (this.page - 1)
     },
+    endIndex() {
+      return 6 * this.page
+    },
+    filteredTickers() {
+      return this.tickers.filter((ticker) => ticker.name.includes(this.filter))
+    },
+    paginatedTickers() {
+      return this.filteredTickers.slice(this.startIndex, this.endIndex)
+    },
+    hasNextPage() {
+      return this.filteredTickers.length > this.endIndex
+    },
+    normilizedGraph() {
+      const maxVal = Math.max(...this.graph)
+      const minVal = Math.min(...this.graph)
+
+      return this.graph.map((el) =>
+        maxVal === minVal ? 5 : 5 + ((el - minVal) * 95) / (maxVal - minVal),
+      )
+    },
+    pageStateOptions() {
+      return {
+        filter: this.filter,
+        page: this.page,
+      }
+    },
+  },
+
+  methods: {
+    async getTickers() {
+      const response = await fetch(
+        `https://min-api.cryptocompare.com/data/all/coinlist?summary=true`,
+      )
+      return await response.json()
+    },
+
     subscribeToUpdates(tickerName) {
       setInterval(async () => {
         const f = await fetch(
@@ -56,34 +102,41 @@ export default {
         this.tickers.find((t) => t.name === tickerName).price =
           data.Response === 'Error' ? 'no info' : data.USD
 
-        if (this.sel?.name === tickerName) {
+        if (this.selectedTicker?.name === tickerName) {
           this.graph.push(data.USD)
         }
       }, 5000)
       this.ticker = ''
     },
+
     add() {
       const newTicker = {
         name: this.ticker.toUpperCase(),
         price: '-',
       }
       if (!this.tickerExcists()) {
-        this.tickers.push(newTicker)
+        this.tickers = [...this.tickers, newTicker]
         this.filter = ''
-        localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
         this.subscribeToUpdates(newTicker.name)
       }
     },
+
     addFromList(apiTicker) {
       this.ticker = apiTicker
       this.add()
     },
-    handleDelete(t) {
-      this.tickers = this.tickers.filter((val) => val !== t)
+
+    handleDelete(tickerToRemove) {
+      this.tickers = this.tickers.filter((val) => val !== tickerToRemove)
+      if (this.selectedTicker === tickerToRemove) {
+        this.selectedTicker = null
+      }
     },
+
     tickerExcists() {
       return this.tickers.find((t) => t.name.toUpperCase() === this.ticker.toUpperCase())
     },
+
     filterTickers() {
       return this.apiTickers
         .filter((ticker) => {
@@ -93,39 +146,32 @@ export default {
         })
         .slice(0, 4)
     },
-    normilizeGraph() {
-      const maxVal = Math.max(...this.graph)
-      const minVal = Math.min(...this.graph)
-      console.log(this.graph)
-      return this.graph.map((el) =>
-        maxVal === minVal ? 5 : 5 + ((el - minVal) * 95) / (maxVal - minVal),
-      )
-    },
+
     select(ticker) {
-      this.sel = ticker
-      this.graph = []
-    },
-    async getTickers() {
-      const response = await fetch(
-        `https://min-api.cryptocompare.com/data/all/coinlist?summary=true`,
-      )
-      return await response.json()
+      this.selectedTicker = ticker
     },
   },
+
   watch: {
+    tickers() {
+      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
+    },
+    paginatedTickers() {
+      if (this.paginatedTickers.length === 0 && this.page > 1) {
+        this.page--
+      }
+    },
+    selectedTicker() {
+      this.graph = []
+    },
     filter() {
       this.page = 1
-      history.pushState(
-        null,
-        document.title,
-        `${location.pathname}?filter=${this.filter}&page=${this.page}`,
-      )
     },
-    page() {
+    pageStateOptions(v) {
       history.pushState(
         null,
         document.title,
-        `${location.pathname}?filter=${this.filter}&page=${this.page}`,
+        `${location.pathname}?filter=${v.filter}&page=${v.page}`,
       )
     },
   },
@@ -246,11 +292,11 @@ export default {
             <hr class="w-full border-t border-gray-600 my-4" />
             <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
               <div
-                v-for="t in filteredTickers()"
+                v-for="t in paginatedTickers"
                 :key="t.name"
                 @click="select(t)"
                 :class="{
-                  'border-2': sel === t,
+                  'border-2': selectedTicker === t,
                 }"
                 class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
               >
@@ -282,17 +328,19 @@ export default {
             <hr class="w-full border-t border-gray-600 my-4" />
           </template>
 
-          <section v-if="sel" class="relative">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">{{ sel.name }} - USD</h3>
+          <section v-if="selectedTicker" class="relative">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
+              {{ selectedTicker.name }} - USD
+            </h3>
             <div class="flex items-end border-gray-600 border-b border-l h-64">
               <div
-                v-for="(bar, idx) in normilizeGraph()"
+                v-for="(bar, idx) in normilizedGraph"
                 :key="idx"
                 :style="{ height: `${bar}%` }"
                 class="bg-purple-800 border w-10"
               ></div>
             </div>
-            <button @click="sel = null" type="button" class="absolute top-0 right-0">
+            <button @click="selectedTicker = null" type="button" class="absolute top-0 right-0">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 xmlns:xlink="http://www.w3.org/1999/xlink"
