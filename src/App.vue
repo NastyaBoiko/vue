@@ -12,7 +12,7 @@ export default {
       page: 1,
 
       apiTickers: [],
-      notMounted: true,
+      loading: false,
     }
   },
 
@@ -45,11 +45,20 @@ export default {
   },
 
   async mounted() {
-    const tickersObj = await this.getTickers()
-    for (let ticker in tickersObj.Data) {
-      this.apiTickers.push(ticker)
+    this.loading = true
+    try {
+      const response = await fetch(
+        `https://min-api.cryptocompare.com/data/all/coinlist?summary=true`,
+      )
+      const tickersObj = await response.json()
+      for (let ticker in tickersObj.Data) {
+        this.apiTickers.push(ticker)
+      }
+    } catch (error) {
+      console.log(error)
+    } finally {
+      this.loading = false
     }
-    this.notMounted = false
   },
 
   computed: {
@@ -85,13 +94,6 @@ export default {
   },
 
   methods: {
-    async getTickers() {
-      const response = await fetch(
-        `https://min-api.cryptocompare.com/data/all/coinlist?summary=true`,
-      )
-      return await response.json()
-    },
-
     subscribeToUpdates(tickerName) {
       setInterval(async () => {
         const f = await fetch(
@@ -186,7 +188,7 @@ export default {
     <body>
       <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
         <div
-          v-if="notMounted"
+          v-if="loading"
           class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center"
         >
           <svg
